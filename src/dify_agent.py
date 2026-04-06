@@ -54,7 +54,14 @@ IMPROVEMENT RULES FROM PAST CALLS (follow these!):
                     json=payload,
                 )
                 if response.status_code != 200:
-                    print(f"Dify error {response.status_code}: {response.text}")
+                    body = response.text
+                    print(f"Dify error {response.status_code}: {body}")
+                    # Retry on Gemini 503 wrapped in Dify 400
+                    if "UNAVAILABLE" in body or "503" in body:
+                        if attempt < 2:
+                            print(f"  Retrying in {3 * (attempt + 1)}s...")
+                            await asyncio.sleep(3 * (attempt + 1))
+                            continue
                     response.raise_for_status()
                 data = response.json()
                 return {
@@ -64,6 +71,6 @@ IMPROVEMENT RULES FROM PAST CALLS (follow these!):
             except (httpx.ReadError, httpx.ConnectError, httpx.RemoteProtocolError) as e:
                 print(f"Dify connection error (attempt {attempt + 1}/3): {e}")
                 if attempt < 2:
-                    await asyncio.sleep(2 * (attempt + 1))
+                    await asyncio.sleep(3 * (attempt + 1))
                 else:
                     raise
