@@ -14,6 +14,7 @@ app = FastAPI(title="SalesGym API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 memory = MemoryManager(data_dir=DATA_DIR)
+_run_status = {"running": False, "generation": -1, "error": None}
 
 
 @app.get("/health")
@@ -68,44 +69,66 @@ class RunGenerationRequest(BaseModel):
     num_generations: int = 3
 
 
+async def _run_evolution_task(num_generations: int):
+    """Background task that runs the full evolution."""
+    global _run_status
+    try:
+        arena = Arena()
+        strategies = get_initial_strategies()
+        results = []
+
+        for gen in range(num_generations):
+            _run_status["generation"] = gen
+            print(f"\n{'='*60}")
+            print(f"GENERATION {gen}")
+            print(f"{'='*60}")
+
+            difficulty = gen + 1
+            customers = get_customer_personas(difficulty=difficulty)
+            result = await arena.run_generation(strategies, customers, gen)
+
+            gen_summary = {
+                "generation": gen,
+                "average_conversion": result["average_conversion"],
+                "best_strategy": result["analysis"]["rankings"][0]["name"] if result["analysis"]["rankings"] else "N/A",
+                "rules_learned": len(result["analysis"]["rules"]),
+                "strategic_insight": result["analysis"].get("strategic_insight", ""),
+                "num_calls": len(result["transcripts"]),
+            }
+            results.append(gen_summary)
+
+            print(f"\n  Gen {gen} Summary:")
+            print(f"    Conversion: {result['average_conversion']:.0%}")
+            print(f"    Best: {gen_summary['best_strategy']}")
+            print(f"    Rules learned: {gen_summary['rules_learned']}")
+
+            strategies = result["evolved_strategies"]
+
+        eval_report = _build_eval_report(results)
+        memory.save_eval_report(eval_report)
+        _run_status["running"] = False
+        print("\nEvolution complete!")
+    except Exception as e:
+        _run_status["running"] = False
+        _run_status["error"] = str(e)
+        print(f"\nEvolution error: {e}")
+
+
 @app.post("/api/run")
 async def run_evolution(request: RunGenerationRequest):
-    """Run the full evolution loop for N generations."""
-    arena = Arena()
-    strategies = get_initial_strategies()
-    results = []
+    """Start the evolution loop in the background."""
+    global _run_status
+    if _run_status["running"]:
+        return {"status": "already_running", "generation": _run_status["generation"]}
+    _run_status = {"running": True, "generation": 0, "error": None}
+    asyncio.create_task(_run_evolution_task(request.num_generations))
+    return {"status": "started", "num_generations": request.num_generations}
 
-    for gen in range(request.num_generations):
-        print(f"\n{'='*60}")
-        print(f"GENERATION {gen}")
-        print(f"{'='*60}")
 
-        difficulty = gen + 1
-        customers = get_customer_personas(difficulty=difficulty)
-        result = await arena.run_generation(strategies, customers, gen)
-
-        gen_summary = {
-            "generation": gen,
-            "average_conversion": result["average_conversion"],
-            "best_strategy": result["analysis"]["rankings"][0]["name"] if result["analysis"]["rankings"] else "N/A",
-            "rules_learned": len(result["analysis"]["rules"]),
-            "strategic_insight": result["analysis"].get("strategic_insight", ""),
-            "num_calls": len(result["transcripts"]),
-        }
-        results.append(gen_summary)
-
-        print(f"\n  Gen {gen} Summary:")
-        print(f"    Conversion: {result['average_conversion']:.0%}")
-        print(f"    Best: {gen_summary['best_strategy']}")
-        print(f"    Rules learned: {gen_summary['rules_learned']}")
-
-        strategies = result["evolved_strategies"]
-
-    # Build eval report
-    eval_report = _build_eval_report(results)
-    memory.save_eval_report(eval_report)
-
-    return {"results": results, "eval_report": eval_report}
+@app.get("/api/status")
+def get_status():
+    """Check evolution run status."""
+    return _run_status
 
 
 def _build_eval_report(results: list[dict]) -> dict:
