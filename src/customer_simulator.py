@@ -1,4 +1,6 @@
+import asyncio
 from google import genai
+from google.genai.errors import ServerError
 from src.models import CustomerPersona, Turn
 
 
@@ -63,8 +65,16 @@ YOUR RESPONSE AS {persona.name}:"""
 
     async def generate_response(self, persona: CustomerPersona, history: list[Turn]) -> str:
         prompt = self._build_customer_prompt(persona, history)
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=prompt,
-        )
-        return response.text.strip()
+        for attempt in range(3):
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                )
+                return response.text.strip()
+            except ServerError as e:
+                print(f"Gemini 503 (attempt {attempt + 1}/3): {e}")
+                if attempt < 2:
+                    await asyncio.sleep(3 * (attempt + 1))
+                else:
+                    raise
