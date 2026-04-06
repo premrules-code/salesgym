@@ -1,0 +1,72 @@
+{
+  "name": "SalesGym Evolution Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [250, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SALESGYM_API_URL}}/api/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"num_generations\": 3\n}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "run_evolution",
+      "name": "Run Evolution",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300],
+      "typeVersion": 4
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SALESGYM_API_URL}}/api/results"
+      },
+      "id": "get_results",
+      "name": "Get Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300],
+      "typeVersion": 4
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SALESGYM_API_URL}}/api/eval"
+      },
+      "id": "get_eval",
+      "name": "Get Eval Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300],
+      "typeVersion": 4
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [{"node": "Run Evolution", "type": "main", "index": 0}]
+      ]
+    },
+    "Run Evolution": {
+      "main": [
+        [{"node": "Get Results", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Results": {
+      "main": [
+        [{"node": "Get Eval Report", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

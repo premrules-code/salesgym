@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+data/voice/*.mp3
+data/voice/gen_*/
+data/conversations/
+data/evals/report.json
+data/memory/outcomes.json
+data/memory/rules.json
+.DS_Store
+*.egg-info/
