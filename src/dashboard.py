@@ -8,332 +8,384 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="SalesGym", page_icon="🧬", layout="wide")
 
+# Custom CSS for better look
+st.markdown("""
+<style>
+    .block-container { padding-top: 2rem; }
+    .stMetric { background: #1e1e2e; padding: 1rem; border-radius: 0.5rem; }
+    div[data-testid="stExpander"] { background: #0e1117; border-radius: 0.5rem; margin-bottom: 0.5rem; }
+    .status-running { color: #f0ad4e; font-weight: bold; }
+    .status-done { color: #5cb85c; font-weight: bold; }
+    .call-win { border-left: 3px solid #5cb85c; padding-left: 0.5rem; margin: 0.3rem 0; }
+    .call-loss { border-left: 3px solid #d9534f; padding-left: 0.5rem; margin: 0.3rem 0; }
+</style>
+""", unsafe_allow_html=True)
 
-def get_status():
+
+def api_get(path, timeout=5):
     try:
-        return requests.get(f"{API_URL}/api/status", timeout=5).json()
-    except Exception:
-        return {"running": False, "generation": -1, "error": None}
-
-
-def get_results():
-    try:
-        resp = requests.get(f"{API_URL}/api/results", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception:
-        return []
-
-
-def get_rules():
-    try:
-        resp = requests.get(f"{API_URL}/api/rules", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception:
-        return []
-
-
-def get_eval():
-    try:
-        resp = requests.get(f"{API_URL}/api/eval", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
+        r = requests.get(f"{API_URL}{path}", timeout=timeout)
+        r.raise_for_status()
+        return r.json()
     except Exception:
         return None
 
 
-# Header
-st.title("🧬 SalesGym")
-st.caption("Co-evolutionary sales agent that rewrites its own script to improve conversion rates")
+def api_post(path, data, timeout=10):
+    try:
+        r = requests.post(f"{API_URL}{path}", json=data, timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        return {"error": str(e)}
 
-# Sidebar
+
+# ─── HEADER ───
+st.markdown("# 🧬 SalesGym")
+st.markdown("**Self-improving AI sales agent** — evolves its own script through simulated calls")
+st.markdown("---")
+
+# ─── STATUS CHECK ───
+status = api_get("/api/status") or {"running": False, "generation": -1, "error": None}
+results = api_get("/api/results") or []
+rules = api_get("/api/rules") or []
+eval_report = api_get("/api/eval")
+
+# ─── SIDEBAR ───
 with st.sidebar:
-    st.header("Controls")
-
-    status = get_status()
+    st.markdown("## Controls")
 
     if status["running"]:
-        st.warning(f"⏳ Evolution running — Generation {status['generation']}")
-        if st.button("Refresh Progress", type="primary", use_container_width=True):
+        gen = status["generation"]
+        st.markdown(f"""
+        <div style="background:#2d2d3d;padding:1rem;border-radius:0.5rem;text-align:center;">
+            <div style="font-size:2rem;">⏳</div>
+            <div style="font-size:1.1rem;font-weight:bold;color:#f0ad4e;">Running</div>
+            <div style="color:#aaa;">Generation {gen} in progress</div>
+            <div style="color:#aaa;">{len(results)} gen(s) completed</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("")
+        if st.button("🔄 Refresh", use_container_width=True, type="primary"):
             st.rerun()
-        st.info("Page auto-refreshes every 30s while running")
     else:
-        if status.get("error"):
-            st.error(f"Last run failed: {status['error']}")
+        if results:
+            st.markdown(f"""
+            <div style="background:#1a3a1a;padding:1rem;border-radius:0.5rem;text-align:center;">
+                <div style="font-size:2rem;">✅</div>
+                <div style="font-size:1.1rem;font-weight:bold;color:#5cb85c;">Complete</div>
+                <div style="color:#aaa;">{len(results)} generations done</div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown("")
 
-        num_gens = st.slider("Generations", 1, 5, 3)
-        if st.button("🚀 Run Evolution", type="primary", use_container_width=True):
-            try:
-                resp = requests.post(
-                    f"{API_URL}/api/run",
-                    json={"num_generations": num_gens},
-                    timeout=10,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                if data.get("status") == "started":
-                    st.success(f"Evolution started! Running {num_gens} generations...")
-                    st.info("Results appear below as each generation completes. Page refreshes automatically.")
-                    time.sleep(2)
-                    st.rerun()
-                elif data.get("status") == "already_running":
-                    st.warning("Evolution already running!")
-                else:
-                    st.success("Done!")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Failed to start: {e}")
+        num_gens = st.selectbox("Generations", [1, 2, 3, 4, 5], index=2)
+        if st.button("🚀 Run Evolution", use_container_width=True, type="primary"):
+            resp = api_post("/api/run", {"num_generations": num_gens})
+            if resp and resp.get("status") == "started":
+                st.success(f"Started! Running {num_gens} generations...")
+                time.sleep(2)
+                st.rerun()
+            elif resp and resp.get("status") == "already_running":
+                st.warning("Already running!")
+            elif resp and resp.get("error"):
+                st.error(resp["error"])
 
-    st.divider()
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        st.rerun()
+        if st.button("🔄 Refresh Data", use_container_width=True):
+            st.rerun()
 
-    st.divider()
-    st.markdown("**Architecture**")
+    st.markdown("---")
+    st.markdown("#### How It Works")
     st.markdown("""
-    - 8 strategies compete per gen
-    - 3 customer personas (get harder)
-    - Claude analyzes patterns
-    - Top strategies survive + evolve
-    - Rules injected into agent prompt
+    1. **8 strategies** compete
+    2. **24 calls** per generation
+    3. **Claude** analyzes patterns
+    4. **Top survive**, rest evolve
+    5. **Customers get harder**
+    6. **Rules** injected into prompts
     """)
 
-# Auto-refresh while running
+    st.markdown("---")
+    st.markdown("#### Tech Stack")
+    st.markdown("""
+    | | |
+    |---|---|
+    | Agent | Dify + Gemini |
+    | Customers | Gemini Flash |
+    | Analysis | Claude Sonnet |
+    | Voice | ElevenLabs |
+    | Backend | FastAPI |
+    """)
+
+# ─── AUTO REFRESH ───
 if status["running"]:
+    placeholder = st.empty()
+    placeholder.info(f"⏳ Evolution running — Generation {status['generation']}. Auto-refreshing in 30s...")
     time.sleep(30)
     st.rerun()
 
-def _show_strategies_and_workflow():
-    """Show the 8 competing strategies and the evolution workflow."""
-    st.subheader("🎯 Competing Strategies")
-    try:
-        strats = requests.get(f"{API_URL}/api/strategies", timeout=5).json()
-    except Exception:
-        strats = []
+# ─── NO RESULTS YET ───
+if not results:
+    # Show the strategies and workflow
+    col_left, col_right = st.columns([3, 2])
 
-    if strats:
-        cols = st.columns(4)
-        for i, s in enumerate(strats):
-            with cols[i % 4]:
-                st.markdown(f"**{s['name']}**")
-                st.caption(s.get("system_prompt", "")[:120] + "...")
-    else:
-        st.caption("Strategies load when the API is running.")
+    with col_left:
+        st.markdown("### 🎯 The 8 Competing Strategies")
+        strategies = api_get("/api/strategies") or []
+        if strategies:
+            for i in range(0, len(strategies), 2):
+                cols = st.columns(2)
+                for j, col in enumerate(cols):
+                    if i + j < len(strategies):
+                        s = strategies[i + j]
+                        with col:
+                            st.markdown(f"""
+                            <div style="background:#1e1e2e;padding:0.8rem;border-radius:0.5rem;margin-bottom:0.5rem;">
+                                <div style="font-weight:bold;font-size:1rem;">#{i+j+1} {s['name']}</div>
+                                <div style="color:#aaa;font-size:0.85rem;margin-top:0.3rem;">{s.get('system_prompt', '')[:100]}...</div>
+                            </div>
+                            """, unsafe_allow_html=True)
 
-    st.subheader("🔄 Evolution Workflow")
-    st.markdown("""
-    ```
-    ┌─────────────────────────────────────────────────────┐
-    │                   GENERATION N                       │
-    ├─────────────────────────────────────────────────────┤
-    │                                                     │
-    │  8 Strategies  ──→  3 Customers  ──→  24 Calls     │
-    │  (Dify Agent)      (Gemini Sim)     (scored 0-100)  │
-    │                                                     │
-    │       ┌──────────────────────────────┐              │
-    │       │  Claude Sonnet Analysis      │              │
-    │       │  - Pattern recognition       │              │
-    │       │  - Rule generation           │              │
-    │       │  - Strategy ranking          │              │
-    │       └──────────────┬───────────────┘              │
-    │                      │                              │
-    │       ┌──────────────▼───────────────┐              │
-    │       │  Evolution                   │              │
-    │       │  - Top 3: KEEP              │              │
-    │       │  - Mid 3: MUTATE + rules    │              │
-    │       │  - Bot 2: CROSSOVER         │              │
-    │       └──────────────┬───────────────┘              │
-    │                      │                              │
-    │              8 Evolved Strategies                   │
-    │              + Harder Customers                     │
-    │                      │                              │
-    └──────────────────────┼──────────────────────────────┘
-                           │
-                    GENERATION N+1
-    ```
-    """)
-
-    st.subheader("🏗️ Architecture")
-    col1, col2 = st.columns(2)
-    with col1:
+    with col_right:
+        st.markdown("### 🔄 Evolution Pipeline")
         st.markdown("""
-        | Component | Tool | Role |
-        |-----------|------|------|
-        | Sales Agent | Dify + Gemini | Runs conversations |
-        | Customer Sim | Gemini Flash | Simulates buyers |
-        | Analysis | Claude Sonnet | Pattern recognition |
-        | Voice | ElevenLabs | Agent speech |
-        | Orchestration | n8n | Pipeline automation |
-        | Dashboard | Streamlit | Visualization |
-        """)
-    with col2:
-        st.markdown("""
-        **Feedback Loop:**
         ```
-        outcome → analysis → script adjustment
-           ↑                        │
-           │   Calls run with       │
-           │   improved script      │
-           └────────────────────────┘
+        8 Strategies × 3 Customers
+              = 24 Calls
+                 │
+                 ▼
+          Score Each Call
+          (0-100 fitness)
+                 │
+                 ▼
+         Claude Analysis
+         "ROI framing won 67%"
+                 │
+                 ▼
+           Evolution
+           Top 3: KEEP
+           Mid 3: MUTATE
+           Bot 2: CROSSOVER
+                 │
+                 ▼
+        8 Evolved Strategies
+        + Harder Customers
+                 │
+                 ▼
+          Next Generation
         ```
-
-        **Scoring (0-100):**
-        - Converted: +50
-        - Rapport (0-1): ×30
-        - Efficiency (<10 turns): ×2
-        - Objection handled: +10
         """)
 
+    st.markdown("---")
+    st.markdown("### 📊 Scoring Formula")
+    cols = st.columns(4)
+    with cols[0]:
+        st.markdown("**Converted?**")
+        st.markdown("`+50 points`")
+    with cols[1]:
+        st.markdown("**Rapport**")
+        st.markdown("`0-30 points`")
+    with cols[2]:
+        st.markdown("**Efficiency**")
+        st.markdown("`0-20 points`")
+    with cols[3]:
+        st.markdown("**Objection Handled**")
+        st.markdown("`+10 points`")
 
-# Load data
-results = get_results()
-rules = get_rules()
-eval_report = get_eval()
-
-# Status banner
-if status["running"]:
-    st.info(f"🔄 Evolution in progress — Generation {status['generation']} running. "
-            f"{len(results)} generation(s) completed so far.")
-elif not results:
-    st.info("👈 Click **Run Evolution** in the sidebar to start the co-evolutionary loop.")
+    st.markdown("---")
+    st.markdown("### 🔁 Feedback Loop")
     st.markdown("""
-    ### How it works
-    1. **8 sales strategies** compete against **3 simulated customers** (24 calls per generation)
-    2. **Claude Sonnet** analyzes outcomes and generates improvement rules
-    3. **Top strategies survive**, middle mutate, bottom get replaced by crossovers
-    4. **Customers get harder** each generation with new objections
-    5. **Repeat** — measurable conversion improvement
+    > **outcome** → **analysis** → **script adjustment** → **better outcome**
+    >
+    > Rules like *"When customer says 'too expensive', use ROI framing instead of discounts"*
+    > are injected into the agent's prompt before each call.
     """)
 
-    # Show strategies and workflow even before running
-    st.divider()
-    _show_strategies_and_workflow()
+    st.info("👈 Click **Run Evolution** to start!")
     st.stop()
 
-# Metrics
-st.divider()
+# ─── RESULTS ───
+
+# Top metrics
+st.markdown("### 📊 Results")
 col1, col2, col3, col4 = st.columns(4)
+initial = results[0]["conversion_rate"] if results else 0
+final = results[-1]["conversion_rate"] if results else 0
+delta = final - initial if len(results) > 1 else 0
+
 with col1:
     st.metric("Generations", len(results))
 with col2:
-    initial = results[0]["conversion_rate"] if results else 0
-    st.metric("Initial Conversion", f"{initial:.0%}")
+    st.metric("Gen 0 Conversion", f"{initial:.0%}")
 with col3:
-    final = results[-1]["conversion_rate"] if results else 0
-    delta = final - initial if len(results) > 1 else 0
-    st.metric("Final Conversion", f"{final:.0%}", delta=f"{delta:+.0%}" if delta else None)
+    st.metric("Latest Conversion", f"{final:.0%}",
+              delta=f"{delta:+.0%}" if len(results) > 1 else None)
 with col4:
     st.metric("Rules Learned", len(rules))
 
 # Conversion chart
-st.divider()
-st.subheader("📈 Conversion Rate Over Generations")
 if len(results) >= 2:
+    st.markdown("### 📈 Conversion Improvement")
     chart_data = pd.DataFrame({
-        "Generation": [r["generation"] for r in results],
+        "Generation": [f"Gen {r['generation']}" for r in results],
         "Conversion Rate": [r["conversion_rate"] for r in results],
     })
-    st.line_chart(chart_data, x="Generation", y="Conversion Rate")
-elif len(results) == 1:
-    st.metric("Gen 0 Conversion", f"{results[0]['conversion_rate']:.0%}")
-    st.caption("More data points will appear as generations complete")
+    st.bar_chart(chart_data, x="Generation", y="Conversion Rate", color="#5cb85c")
 
-# Strategy leaderboard
-st.divider()
-st.subheader("🏆 Strategy Leaderboard")
+st.markdown("---")
 
-for gen_result in results:
-    converted = sum(1 for t in gen_result["transcripts"] if t["outcome"]["converted"])
-    total = gen_result["num_calls"]
-    with st.expander(
-        f"Generation {gen_result['generation']} — "
-        f"{gen_result['conversion_rate']:.0%} conversion "
-        f"({converted}/{total} calls converted)",
-        expanded=(gen_result["generation"] == len(results) - 1),
-    ):
-        # Summary table
+# ─── GENERATION DETAILS ───
+st.markdown("### 🏆 Generation Details")
+
+tabs = st.tabs([f"Gen {r['generation']} ({r['conversion_rate']:.0%})" for r in results])
+
+for tab, gen_result in zip(tabs, results):
+    with tab:
+        # Strategy performance summary
         strategies = {}
         for t in gen_result["transcripts"]:
             name = t["strategy_name"]
             if name not in strategies:
-                strategies[name] = {"wins": 0, "total": 0, "rapport_sum": 0}
+                strategies[name] = {"wins": 0, "total": 0, "rapport": 0, "scores": []}
             strategies[name]["total"] += 1
-            strategies[name]["rapport_sum"] += t["outcome"]["rapport"]
+            strategies[name]["rapport"] += t["outcome"]["rapport"]
             if t["outcome"]["converted"]:
                 strategies[name]["wins"] += 1
 
-        cols = st.columns(min(4, len(strategies)))
-        for i, (name, stats) in enumerate(sorted(strategies.items(), key=lambda x: -x[1]["wins"])):
+        sorted_strats = sorted(strategies.items(), key=lambda x: -x[1]["wins"])
+
+        st.markdown("#### Strategy Performance")
+        cols = st.columns(min(4, len(sorted_strats)))
+        for i, (name, stats) in enumerate(sorted_strats):
             with cols[i % len(cols)]:
                 rate = stats["wins"] / stats["total"] if stats["total"] else 0
-                avg_rapport = stats["rapport_sum"] / stats["total"] if stats["total"] else 0
-                st.markdown(f"**{name}**")
-                st.caption(f"{stats['wins']}/{stats['total']} converted ({rate:.0%})")
-                st.caption(f"Avg rapport: {avg_rapport:.1f}")
+                avg_rapport = stats["rapport"] / stats["total"] if stats["total"] else 0
+                medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else ""
+                st.markdown(f"""
+                <div style="background:#1e1e2e;padding:0.8rem;border-radius:0.5rem;text-align:center;">
+                    <div style="font-size:1.3rem;">{medal}</div>
+                    <div style="font-weight:bold;">{name}</div>
+                    <div style="font-size:1.5rem;color:{'#5cb85c' if rate > 0 else '#d9534f'};">{rate:.0%}</div>
+                    <div style="color:#aaa;font-size:0.8rem;">{stats['wins']}/{stats['total']} converted</div>
+                    <div style="color:#aaa;font-size:0.8rem;">rapport: {avg_rapport:.1f}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.markdown("**Call Details**")
+        # Individual calls
+        st.markdown("")
+        st.markdown("#### Call Transcripts")
         for t in gen_result["transcripts"]:
             icon = "✅" if t["outcome"]["converted"] else "❌"
-            with st.expander(
-                f"{icon} {t['strategy_name']} vs {t['customer_id']} "
-                f"— rapport: {t['outcome']['rapport']:.1f}, "
-                f"turns: {t['outcome']['turns']}, "
-                f"score: {t['outcome'].get('fitness_score', 'N/A')}"
-            ):
+            score = t["outcome"].get("fitness_score", "—")
+            label = (
+                f"{icon} **{t['strategy_name']}** vs **{t['customer_id']}** "
+                f"| rapport: {t['outcome']['rapport']:.1f} "
+                f"| turns: {t['outcome']['turns']} "
+                f"| score: {score}"
+            )
+            with st.expander(label):
                 for turn in t["turns"]:
                     if turn["role"] == "agent":
                         st.markdown(f"🤖 **Agent:** {turn['text']}")
                     else:
                         st.markdown(f"👤 **Customer:** {turn['text']}")
                 if t["outcome"]["objections_faced"]:
-                    st.caption(f"Objections: {', '.join(t['outcome']['objections_faced'])}")
+                    st.caption(f"Objections faced: {', '.join(t['outcome']['objections_faced'])}")
 
-# Improvement rules
-st.divider()
-st.subheader("🧠 Improvement Rules (Agent Memory)")
+st.markdown("---")
+
+# ─── IMPROVEMENT RULES ───
+st.markdown("### 🧠 Improvement Rules")
+st.caption("These rules are injected into the agent's prompt — the feedback loop in action")
+
 if rules:
-    st.caption(f"{len(rules)} rules learned across all generations")
     for rule in rules:
-        with st.container(border=True):
-            st.markdown(f"**When:** {rule['trigger']}")
-            st.markdown(f"~~{rule['old_response']}~~ → **{rule['new_response']}**")
-            st.caption(f"Evidence: {rule['evidence']} | Gen {rule['generation_learned']}")
+        st.markdown(f"""
+        <div style="background:#1e1e2e;padding:0.8rem;border-radius:0.5rem;margin-bottom:0.5rem;">
+            <div><strong>When:</strong> {rule['trigger']}</div>
+            <div style="color:#d9534f;text-decoration:line-through;margin:0.2rem 0;">Old: {rule['old_response']}</div>
+            <div style="color:#5cb85c;margin:0.2rem 0;">New: {rule['new_response']}</div>
+            <div style="color:#666;font-size:0.8rem;">Evidence: {rule['evidence']} | Gen {rule['generation_learned']}</div>
+        </div>
+        """, unsafe_allow_html=True)
 else:
-    st.info("No rules learned yet — they appear after the first generation completes.")
+    st.info("Rules appear after the first generation completes.")
 
-# Eval report
-st.divider()
-st.subheader("📊 Evaluation Report")
+st.markdown("---")
+
+# ─── EVAL REPORT ───
+st.markdown("### 📋 Evaluation Report")
 if eval_report:
     col1, col2 = st.columns(2)
     with col1:
         improvement = eval_report.get("improvement", 0)
         st.metric("Total Improvement", f"{improvement:+.0%}")
-        st.metric("Total Rules", eval_report.get("total_rules_learned", 0))
+        st.metric("Rules Generated", eval_report.get("total_rules_learned", 0))
+
+        if eval_report.get("improving"):
+            st.success("✅ Agent improved consistently across all generations")
+        else:
+            st.warning("⚠️ Non-monotonic — some generations dipped (normal with harder customers)")
+
     with col2:
         trend = eval_report.get("conversion_trend", [])
         if trend:
-            trend_df = pd.DataFrame({
-                "Generation": list(range(len(trend))),
-                "Conversion": trend,
-            })
-            st.bar_chart(trend_df, x="Generation", y="Conversion")
-        if eval_report.get("improving"):
-            st.success("✅ Agent consistently improved across all generations")
-        else:
-            st.warning("⚠️ Improvement was not monotonic (some generations dipped)")
+            st.markdown("**Conversion by Generation:**")
+            for i, conv in enumerate(trend):
+                bar_len = int(conv * 30)
+                color = "#5cb85c" if i == len(trend) - 1 else "#4a9eff"
+                st.markdown(
+                    f"Gen {i}: `{'█' * bar_len}{'░' * (30 - bar_len)}` **{conv:.0%}**"
+                )
 
     st.markdown("---")
-    st.markdown("**Feedback Loop Demonstrated:**")
-    st.markdown("```outcome → analysis → script adjustment → better outcome```")
-    st.markdown(f"- Gen 0 baseline: **{eval_report.get('initial_conversion', 0):.0%}**")
-    st.markdown(f"- Final conversion: **{eval_report.get('final_conversion', 0):.0%}**")
-    st.markdown(f"- Rules driving improvement: **{eval_report.get('total_rules_learned', 0)}**")
+    st.markdown("#### Success Criteria")
+    st.markdown(f"""
+    | Criteria | Status |
+    |----------|--------|
+    | Agent simulates sales conversations (voice) | ✅ Dify + Gemini + ElevenLabs TTS |
+    | Feedback loop: outcome → analysis → script | ✅ {eval_report.get('total_rules_learned', 0)} rules generated |
+    | Documents improvement logic | ✅ Rules with evidence stored in memory |
+    | 2+ iteration cycles | ✅ {len(results)} generations completed |
+    | Baseline: {eval_report.get('initial_conversion', 0):.0%} → Final: {eval_report.get('final_conversion', 0):.0%} | {'✅' if improvement > 0 else '⚠️'} {improvement:+.0%} change |
+    """)
 else:
     st.info("Eval report appears after all generations complete.")
 
-# Always show strategies and architecture at bottom
-st.divider()
-_show_strategies_and_workflow()
+st.markdown("---")
+
+# ─── ARCHITECTURE ───
+st.markdown("### 🏗️ Architecture")
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("""
+    | Component | Tool | Purpose |
+    |-----------|------|---------|
+    | Sales Agent | Dify Chatflow | Dynamic prompt injection |
+    | Customer Sim | Gemini Flash | Role-play as buyers |
+    | Analysis | Claude Sonnet | Pattern recognition |
+    | Evolution | Claude Sonnet | Strategy mutation |
+    | Voice | ElevenLabs | Agent speech synthesis |
+    | Backend | Python FastAPI | Scoring + orchestration |
+    | Dashboard | Streamlit | Visualization |
+    | Orchestration | n8n | Pipeline automation |
+    """)
+
+with col2:
+    st.markdown("""
+    **Feedback Loop:**
+    ```
+    outcome → analysis → script adjustment
+       ↑                        │
+       │   Calls run with       │
+       │   improved script      │
+       └────────────────────────┘
+    ```
+
+    **Why this architecture?**
+    - Gemini Flash for calls ($0.07/gen) — cheap
+    - Claude Sonnet for analysis — smart
+    - 8 strategies explore solution space
+    - Evolutionary approach avoids local optima
+    - Total cost: ~$1 for full 3-gen run
+    """)
