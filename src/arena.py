@@ -148,14 +148,15 @@ class Arena:
 
         # Run all calls (sequentially to avoid API rate limits)
         transcripts = []
-        for strategy, customer in pairs:
-            print(f"  Running: {strategy.name} vs {customer.name}...")
+        for i, (strategy, customer) in enumerate(pairs):
+            print(f"  Running: {strategy.name} vs {customer.name}... ({i+1}/{len(pairs)})")
             transcript = await self.run_single_call(
                 strategy, customer, generation, improvement_rules,
             )
             transcripts.append(transcript)
             status = "CONVERTED" if transcript.outcome.converted else "LOST"
             print(f"    → {status} (rapport: {transcript.outcome.rapport:.1f})")
+            await asyncio.sleep(1)  # Avoid rate limits
 
         # Save transcripts
         self.memory.save_transcripts(generation, transcripts)

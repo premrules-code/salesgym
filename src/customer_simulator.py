@@ -5,7 +5,7 @@ from src.models import CustomerPersona, Turn
 class CustomerSimulator:
     def __init__(self, api_key: str):
         self.client = genai.Client(api_key=api_key) if api_key and api_key != "fake-key" else None
-        self.model = "gemini-2.0-flash"
+        self.model = "gemini-2.5-flash"
 
     def _build_customer_prompt(self, persona: CustomerPersona, history: list[Turn]) -> str:
         evolved = ""
