@@ -201,6 +201,128 @@ if not results:
     > are injected into the agent's prompt before each call.
     """)
 
+    st.markdown("---")
+    st.markdown("### 📅 What Happens Each Generation")
+
+    gen_tabs = st.tabs(["Gen 0 — Baseline", "Gen 1 — First Evolution", "Gen 2 — Final Push"])
+
+    with gen_tabs[0]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### Inputs")
+            st.markdown("""
+            - **8 original strategies** (Storyteller, Closer, Consultant, Friend, Expert, Challenger, Value First, Direct)
+            - **3 easy customers** (Budget Bob, Skeptical Sarah, Busy Ben)
+            - **No improvement rules** — cold start
+            - **24 calls** total (8 strategies × 3 customers)
+            """)
+        with col2:
+            st.markdown("#### What Happens")
+            st.markdown("""
+            1. Each strategy talks to each customer via Dify
+            2. Gemini simulates realistic customer responses
+            3. ElevenLabs voices the agent's responses
+            4. Each call scored (conversion, rapport, efficiency)
+            5. **Claude Sonnet** analyzes all 24 outcomes
+            6. Generates first improvement rules
+            7. Ranks strategies: KEEP / MUTATE / REPLACE
+            """)
+        st.markdown("#### Expected Output")
+        st.markdown("""
+        - **~25-35% conversion** (no rules yet, some strategies work naturally)
+        - **~4 improvement rules** (e.g., "When price objection → use ROI framing not discounts")
+        - **Strategy rankings** (e.g., Storyteller wins, Closer loses)
+        """)
+
+    with gen_tabs[1]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### Inputs")
+            st.markdown("""
+            - **8 evolved strategies** (top 3 kept, mid 3 mutated with rules, bottom 2 replaced by crossovers)
+            - **3 harder customers** — new objections added:
+              - Bob: *"My nephew said he can set up a free backup"*
+              - Sarah: *"Dropbox already has versioning. What do you do different?"*
+              - Ben: *"Every call starts with 'this will be quick.' Prove it."*
+            - **4+ improvement rules** injected into every agent prompt
+            """)
+        with col2:
+            st.markdown("#### What Happens")
+            st.markdown("""
+            1. Evolved strategies face harder customers
+            2. Rules guide agent: *"Use ROI framing"* instead of old approach
+            3. Mutated strategies have refined pitches
+            4. Crossover strategies combine best traits
+            5. **Claude** generates more rules from new patterns
+            6. Strategies re-ranked with new data
+            """)
+        st.markdown("#### Expected Output")
+        st.markdown("""
+        - **~35-50% conversion** (rules help, but customers are harder)
+        - **~8 total rules** (accumulated from Gen 0 + Gen 1)
+        - **Strategies converge** on what works (e.g., ROI framing, story-driven approaches)
+        """)
+
+    with gen_tabs[2]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### Inputs")
+            st.markdown("""
+            - **Twice-evolved strategies** (battle-tested through 2 rounds)
+            - **Hardest customers** — even more objections:
+              - Bob: *"Show me a money-back guarantee in writing"*
+              - Sarah: *"Can you prove your encryption is better than Dropbox's?"*
+              - Ben: *"You have exactly one sentence. Go."*
+            - **8+ improvement rules** accumulated over 2 generations
+            """)
+        with col2:
+            st.markdown("#### What Happens")
+            st.markdown("""
+            1. Best-evolved strategies vs toughest customers
+            2. Full rule library guides every agent response
+            3. Agent adapts to new objections using learned patterns
+            4. Final analysis shows overall improvement trend
+            5. **Eval report** generated comparing Gen 0 → Gen 2
+            """)
+        st.markdown("#### Expected Output")
+        st.markdown("""
+        - **~40-60% conversion** (agent is now battle-hardened)
+        - **~12 total rules** (deep library of sales wisdom)
+        - **Clear improvement trend**: Gen 0 < Gen 1 < Gen 2
+        - **Eval report**: proves the feedback loop works
+        """)
+
+    st.markdown("---")
+    st.markdown("### 👥 Customer Personas")
+    cust_cols = st.columns(3)
+    with cust_cols[0]:
+        st.markdown("""
+        <div style="background:#1e1e2e;padding:1rem;border-radius:0.5rem;">
+            <div style="font-size:1.5rem;">💰</div>
+            <div style="font-weight:bold;font-size:1.1rem;">Budget Bob</div>
+            <div style="color:#aaa;font-size:0.85rem;">Small bakery owner. Tight budget. Skeptical of new expenses. Responds to clear ROI.</div>
+            <div style="color:#f0ad4e;font-size:0.8rem;margin-top:0.5rem;">Main objection: Price</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with cust_cols[1]:
+        st.markdown("""
+        <div style="background:#1e1e2e;padding:1rem;border-radius:0.5rem;">
+            <div style="font-size:1.5rem;">🔍</div>
+            <div style="font-weight:bold;font-size:1.1rem;">Skeptical Sarah</div>
+            <div style="color:#aaa;font-size:0.85rem;">Freelance designer. Already uses Dropbox. Needs proof and data to switch.</div>
+            <div style="color:#f0ad4e;font-size:0.8rem;margin-top:0.5rem;">Main objection: Already has solution</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with cust_cols[2]:
+        st.markdown("""
+        <div style="background:#1e1e2e;padding:1rem;border-radius:0.5rem;">
+            <div style="font-size:1.5rem;">⏱️</div>
+            <div style="font-weight:bold;font-size:1.1rem;">Busy Ben</div>
+            <div style="color:#aaa;font-size:0.85rem;">Restaurant owner. Gets 10 sales calls/day. 15 seconds to hook him or he hangs up.</div>
+            <div style="color:#f0ad4e;font-size:0.8rem;margin-top:0.5rem;">Main objection: No time</div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.info("👈 Click **Run Evolution** to start!")
     st.stop()
 
