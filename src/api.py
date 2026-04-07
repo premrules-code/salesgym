@@ -69,9 +69,20 @@ def score_calls(request: ScoreRequest):
 class RunGenerationRequest(BaseModel):
     generation: int = 0
     num_generations: int = 3
+    webhook_url: str | None = None
 
 
-async def _run_evolution_task(num_generations: int):
+async def _notify_webhook(webhook_url: str, payload: dict):
+    """Send webhook notification (fire-and-forget)."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.post(webhook_url, json=payload)
+    except Exception as e:
+        print(f"Webhook notification failed: {e}")
+
+
+async def _run_evolution_task(num_generations: int, webhook_url: str | None = None):
     """Background task that runs the full evolution."""
     global _run_status
     try:
@@ -104,16 +115,35 @@ async def _run_evolution_task(num_generations: int):
             print(f"    Best: {gen_summary['best_strategy']}")
             print(f"    Rules learned: {gen_summary['rules_learned']}")
 
+            # Notify webhook after each generation
+            if webhook_url:
+                await _notify_webhook(webhook_url, {
+                    "event": "generation_complete",
+                    "data": gen_summary,
+                })
+
             strategies = result["evolved_strategies"]
 
         eval_report = _build_eval_report(results)
         memory.save_eval_report(eval_report)
         _run_status["running"] = False
         print("\nEvolution complete!")
+
+        # Final webhook notification
+        if webhook_url:
+            await _notify_webhook(webhook_url, {
+                "event": "evolution_complete",
+                "data": {"results": results, "eval": eval_report},
+            })
     except Exception as e:
         _run_status["running"] = False
         _run_status["error"] = str(e)
         print(f"\nEvolution error: {e}")
+        if webhook_url:
+            await _notify_webhook(webhook_url, {
+                "event": "evolution_error",
+                "data": {"error": str(e)},
+            })
 
 
 @app.post("/api/run")
@@ -123,7 +153,7 @@ async def run_evolution(request: RunGenerationRequest):
     if _run_status["running"]:
         return {"status": "already_running", "generation": _run_status["generation"]}
     _run_status = {"running": True, "generation": 0, "error": None}
-    asyncio.create_task(_run_evolution_task(request.num_generations))
+    asyncio.create_task(_run_evolution_task(request.num_generations, request.webhook_url))
     return {"status": "started", "num_generations": request.num_generations}
 
 
@@ -164,6 +194,26 @@ def get_results():
         })
         gen += 1
     return all_results
+
+
+@app.get("/api/results/{generation}")
+def get_generation_result(generation: int):
+    """Get results for a specific generation — used by n8n per-generation hooks."""
+    transcripts = memory.load_transcripts(generation)
+    if not transcripts:
+        raise HTTPException(404, f"No results for generation {generation}")
+    strategies = memory.load_strategies(generation)
+    rules = memory.load_rules()
+    gen_rules = [r for r in rules if r.generation_learned == generation]
+    conversion = sum(1 for t in transcripts if t.outcome.converted) / len(transcripts)
+    return {
+        "generation": generation,
+        "num_calls": len(transcripts),
+        "conversion_rate": conversion,
+        "strategies": [s.model_dump() for s in strategies] if strategies else [],
+        "rules_learned": [r.model_dump() for r in gen_rules],
+        "transcripts": [t.model_dump() for t in transcripts],
+    }
 
 
 @app.get("/api/eval")

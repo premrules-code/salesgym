@@ -502,6 +502,91 @@ else:
 
 st.markdown("---")
 
+# ─── N8N WORKFLOW ───
+st.markdown("### 🔗 n8n Workflow — Pipeline Orchestration")
+st.caption("The evolution pipeline can be triggered and monitored via n8n (importable workflow included)")
+
+n8n_col1, n8n_col2 = st.columns([3, 2])
+with n8n_col1:
+    st.markdown("""
+    ```
+    ┌─────────────┐    ┌──────────────┐    ┌────────────┐
+    │   Trigger    │───▶│  ⚙️ Config   │───▶│ 🚀 Start   │
+    │  (Manual or  │    │ generations  │    │  Evolution  │
+    │  Scheduled)  │    │ api_url      │    │ POST /run   │
+    └─────────────┘    └──────────────┘    └─────┬──────┘
+                                                  │
+                        ┌─────────────────────────┘
+                        ▼
+                   ┌─────────┐    ┌──────────────┐
+                   │ ⏳ Wait  │───▶│ 📡 Check     │
+                   │  30 sec  │◀──┐│   Status     │
+                   └─────────┘   ││ GET /status  │
+                                 │└──────┬───────┘
+                                 │       │
+                                 │  ┌────▼─────┐
+                                 │  │ Still     │
+                                 └──│ Running?  │
+                                    └────┬──────┘
+                                         │ No
+                        ┌────────────────┘
+                        ▼
+    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+    │ 📊 Get       │───▶│ 🧠 Get       │───▶│ 📋 Get Eval  │
+    │  Results     │    │  Rules       │    │  Report      │
+    │ GET /results │    │ GET /rules   │    │ GET /eval    │
+    └──────────────┘    └──────────────┘    └──────┬───────┘
+                                                    │
+                        ┌───────────────────────────┘
+                        ▼
+                   ┌──────────┐
+                   │ 📝 Build │
+                   │ Summary  │
+                   └────┬─────┘
+                        │
+                   ┌────▼─────┐
+                   │ Improved?│
+                   └──┬───┬───┘
+              Yes ◀───┘   └───▶ No
+           ┌──────┐       ┌─────────┐
+           │  ✅   │       │   ⚠️    │
+           │ Pass  │       │  Tune   │
+           └──────┘       └─────────┘
+    ```
+    """)
+
+with n8n_col2:
+    st.markdown("#### How to Use")
+    st.markdown("""
+    1. **Import** `docs/n8n-workflow.json` into n8n
+    2. **Set** `SALESGYM_API_URL` env var in n8n
+    3. **Run** — triggers evolution, polls until done, collects results
+
+    **Features:**
+    - Polling loop (30s intervals)
+    - Error handling & branching
+    - Improvement check (pass/fail)
+    - Summary with conversion metrics
+
+    **Webhook mode** (alternative):
+    Pass `webhook_url` in `/api/run` body to get
+    notified after each generation completes.
+    """)
+
+    st.markdown("#### API Endpoints")
+    st.markdown("""
+    | Endpoint | Method | Purpose |
+    |----------|--------|---------|
+    | `/api/run` | POST | Start evolution |
+    | `/api/status` | GET | Poll progress |
+    | `/api/results` | GET | All gen results |
+    | `/api/results/{gen}` | GET | Per-gen results |
+    | `/api/rules` | GET | Improvement rules |
+    | `/api/eval` | GET | Eval report |
+    """)
+
+st.markdown("---")
+
 # ─── ARCHITECTURE ───
 st.markdown("### 🏗️ Architecture")
 col1, col2 = st.columns(2)

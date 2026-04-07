@@ -1,72 +1,433 @@
 {
-  "name": "SalesGym Evolution Pipeline",
+  "name": "SalesGym — Self-Improving Sales Agent Pipeline",
   "nodes": [
     {
       "parameters": {},
-      "id": "trigger",
+      "id": "a1000000-0000-0000-0000-000000000001",
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
-      "position": [250, 300],
+      "position": [240, 560],
       "typeVersion": 1
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{$env.SALESGYM_API_URL}}/api/run",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"num_generations\": 3\n}",
-        "options": {
-          "timeout": 600000
+        "content": "## SalesGym Evolution Pipeline\n\n**Goal:** Run 3 generations of AI sales agent evolution.\nEach generation:\n1. 8 strategies × 3 customers = 24 calls\n2. Score & analyze outcomes\n3. Claude extracts improvement rules\n4. Evolve strategies (keep/mutate/crossover)\n\n**Set `SALESGYM_API_URL` in n8n env vars**\n(e.g., `http://localhost:8000` or Railway URL)",
+        "height": 340,
+        "width": 340,
+        "color": 4
+      },
+      "id": "a1000000-0000-0000-0000-000000000000",
+      "name": "📋 Pipeline Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [180, 180],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "api_url",
+              "name": "api_url",
+              "value": "={{ $env.SALESGYM_API_URL || 'http://localhost:8000' }}",
+              "type": "string"
+            },
+            {
+              "id": "num_generations",
+              "name": "num_generations",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "poll_interval_seconds",
+              "name": "poll_interval_seconds",
+              "value": 30,
+              "type": "number"
+            }
+          ]
         }
       },
-      "id": "run_evolution",
-      "name": "Run Evolution",
+      "id": "a1000000-0000-0000-0000-000000000002",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 560],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api_url }}/api/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ num_generations: $json.num_generations }) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-0000-0000-000000000003",
+      "name": "🚀 Start Evolution",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [500, 300],
+      "position": [680, 560],
+      "typeVersion": 4
+    },
+    {
+      "parameters": {
+        "content": "## Phase 1: Kick Off\n\nStart the evolution background task.\nReturns immediately with `{status: 'started'}`.\nThe API runs 3 generations in the background (~20 min).",
+        "height": 160,
+        "width": 300,
+        "color": 5
+      },
+      "id": "a1000000-0000-0000-0000-000000000020",
+      "name": "💡 Phase 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [600, 380],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "a1000000-0000-0000-0000-000000000004",
+      "name": "⏳ Wait 30s",
+      "type": "n8n-nodes-base.wait",
+      "position": [900, 560],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.api_url }}/api/status",
+        "options": {}
+      },
+      "id": "a1000000-0000-0000-0000-000000000005",
+      "name": "📡 Check Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 560],
+      "typeVersion": 4
+    },
+    {
+      "parameters": {
+        "content": "## Phase 2: Poll Until Done\n\nCheck `/api/status` every 30s.\nIf `running=true`, loop back.\nIf `running=false`, proceed to results.\nIf `error`, stop with error.",
+        "height": 160,
+        "width": 300,
+        "color": 3
+      },
+      "id": "a1000000-0000-0000-0000-000000000021",
+      "name": "💡 Phase 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [860, 380],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "" },
+          "conditions": [
+            {
+              "id": "running_check",
+              "leftValue": "={{ $json.running }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000006",
+      "name": "Still Running?",
+      "type": "n8n-nodes-base.if",
+      "position": [1340, 560],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "" },
+          "conditions": [
+            {
+              "id": "error_check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000007",
+      "name": "Has Error?",
+      "type": "n8n-nodes-base.if",
+      "position": [1560, 700],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error_msg",
+              "name": "error",
+              "value": "={{ 'Evolution failed: ' + $json.error }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000008",
+      "name": "❌ Error",
+      "type": "n8n-nodes-base.set",
+      "position": [1780, 600],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.api_url }}/api/results",
+        "options": {}
+      },
+      "id": "a1000000-0000-0000-0000-000000000009",
+      "name": "📊 Get All Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1780, 840],
+      "typeVersion": 4
+    },
+    {
+      "parameters": {
+        "content": "## Phase 3: Collect Results\n\nFetch all generation results, improvement rules,\nand the final eval report.\nEach generation has 24 call transcripts with\nconversion rates and strategy rankings.",
+        "height": 160,
+        "width": 300,
+        "color": 6
+      },
+      "id": "a1000000-0000-0000-0000-000000000022",
+      "name": "💡 Phase 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [1700, 1000],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').item.json.api_url }}/api/rules",
+        "options": {}
+      },
+      "id": "a1000000-0000-0000-0000-000000000010",
+      "name": "🧠 Get Improvement Rules",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2020, 840],
       "typeVersion": 4
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$env.SALESGYM_API_URL}}/api/results"
+        "url": "={{ $('⚙️ Config').item.json.api_url }}/api/eval",
+        "options": {}
       },
-      "id": "get_results",
-      "name": "Get Results",
+      "id": "a1000000-0000-0000-0000-000000000011",
+      "name": "📋 Get Eval Report",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [750, 300],
+      "position": [2260, 840],
       "typeVersion": 4
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{$env.SALESGYM_API_URL}}/api/eval"
+        "jsCode": "// Build the final evolution summary\nconst results = $('📊 Get All Results').first().json;\nconst rules = $('🧠 Get Improvement Rules').first().json;\nconst evalReport = $('📋 Get Eval Report').first().json;\n\n// Extract conversion rates per generation\nconst generations = Array.isArray(results) ? results : [];\nconst conversions = generations.map(g => ({\n  generation: g.generation,\n  conversion_rate: (g.conversion_rate * 100).toFixed(0) + '%',\n  num_calls: g.num_calls,\n}));\n\nconst initial = generations.length > 0 ? generations[0].conversion_rate : 0;\nconst final_ = generations.length > 0 ? generations[generations.length - 1].conversion_rate : 0;\nconst improvement = ((final_ - initial) * 100).toFixed(0);\n\nconst rulesList = Array.isArray(rules) ? rules : [];\n\nreturn [{\n  json: {\n    summary: {\n      total_generations: generations.length,\n      initial_conversion: (initial * 100).toFixed(0) + '%',\n      final_conversion: (final_ * 100).toFixed(0) + '%',\n      improvement: improvement + ' percentage points',\n      total_rules_learned: rulesList.length,\n      improving: evalReport?.improving || false,\n    },\n    generations: conversions,\n    rules: rulesList.map(r => ({\n      trigger: r.trigger,\n      old_approach: r.old_response,\n      new_approach: r.new_response,\n    })),\n    eval: evalReport,\n    verdict: parseFloat(improvement) > 0\n      ? '✅ Agent IMPROVED — feedback loop is working!'\n      : '⚠️ Agent did not improve — may need tuning',\n  }\n}];"
       },
-      "id": "get_eval",
-      "name": "Get Eval Report",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [1000, 300],
-      "typeVersion": 4
+      "id": "a1000000-0000-0000-0000-000000000012",
+      "name": "📝 Build Summary",
+      "type": "n8n-nodes-base.code",
+      "position": [2500, 840],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "" },
+          "conditions": [
+            {
+              "id": "improvement_check",
+              "leftValue": "={{ $json.eval?.improving }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000013",
+      "name": "Agent Improved?",
+      "type": "n8n-nodes-base.if",
+      "position": [2720, 840],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "content": "## Phase 4: Evaluate\n\nDid the agent actually improve?\n- ✅ Yes → Feedback loop works!\n- ⚠️ No → May need tuning\n\nThis is the core success criteria.",
+        "height": 160,
+        "width": 300,
+        "color": 2
+      },
+      "id": "a1000000-0000-0000-0000-000000000023",
+      "name": "💡 Phase 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [2640, 1000],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "final_status",
+              "value": "✅ SUCCESS — Self-improving agent verified!",
+              "type": "string"
+            },
+            {
+              "id": "detail",
+              "name": "detail",
+              "value": "={{ 'Conversion improved from ' + $json.summary.initial_conversion + ' to ' + $json.summary.final_conversion + '. ' + $json.summary.total_rules_learned + ' improvement rules learned.' }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000014",
+      "name": "✅ Success",
+      "type": "n8n-nodes-base.set",
+      "position": [2960, 740],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "final_status",
+              "value": "⚠️ NEEDS TUNING — Conversion did not improve monotonically",
+              "type": "string"
+            },
+            {
+              "id": "detail",
+              "name": "detail",
+              "value": "={{ 'Conversion: ' + $json.summary.initial_conversion + ' → ' + $json.summary.final_conversion + '. Non-monotonic improvement is normal with increasing difficulty.' }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000015",
+      "name": "⚠️ Needs Tuning",
+      "type": "n8n-nodes-base.set",
+      "position": [2960, 940],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "content": "## Per-Generation API\n\nYou can also fetch results per generation:\n`GET /api/results/0` → Gen 0 data\n`GET /api/results/1` → Gen 1 data\n`GET /api/results/2` → Gen 2 data\n\nEach includes transcripts, strategies, and rules.",
+        "height": 180,
+        "width": 300,
+        "color": 7
+      },
+      "id": "a1000000-0000-0000-0000-000000000024",
+      "name": "💡 Per-Gen API",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [2020, 1000],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Webhook Support\n\nPass `webhook_url` in the POST body to `/api/run`\nto receive callbacks after each generation:\n\n```json\n{\n  \"num_generations\": 3,\n  \"webhook_url\": \"https://your-n8n/webhook/abc\"\n}\n```\n\nEvents: `generation_complete`, `evolution_complete`, `evolution_error`",
+        "height": 220,
+        "width": 340,
+        "color": 1
+      },
+      "id": "a1000000-0000-0000-0000-000000000025",
+      "name": "💡 Webhook Mode",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [560, 760],
+      "typeVersion": 1
     }
   ],
   "connections": {
     "Manual Trigger": {
       "main": [
-        [{"node": "Run Evolution", "type": "main", "index": 0}]
+        [{"node": "⚙️ Config", "type": "main", "index": 0}]
       ]
     },
-    "Run Evolution": {
+    "⚙️ Config": {
       "main": [
-        [{"node": "Get Results", "type": "main", "index": 0}]
+        [{"node": "🚀 Start Evolution", "type": "main", "index": 0}]
       ]
     },
-    "Get Results": {
+    "🚀 Start Evolution": {
       "main": [
-        [{"node": "Get Eval Report", "type": "main", "index": 0}]
+        [{"node": "⏳ Wait 30s", "type": "main", "index": 0}]
+      ]
+    },
+    "⏳ Wait 30s": {
+      "main": [
+        [{"node": "📡 Check Status", "type": "main", "index": 0}]
+      ]
+    },
+    "📡 Check Status": {
+      "main": [
+        [{"node": "Still Running?", "type": "main", "index": 0}]
+      ]
+    },
+    "Still Running?": {
+      "main": [
+        [{"node": "⏳ Wait 30s", "type": "main", "index": 0}],
+        [{"node": "Has Error?", "type": "main", "index": 0}]
+      ]
+    },
+    "Has Error?": {
+      "main": [
+        [{"node": "❌ Error", "type": "main", "index": 0}],
+        [{"node": "📊 Get All Results", "type": "main", "index": 0}]
+      ]
+    },
+    "📊 Get All Results": {
+      "main": [
+        [{"node": "🧠 Get Improvement Rules", "type": "main", "index": 0}]
+      ]
+    },
+    "🧠 Get Improvement Rules": {
+      "main": [
+        [{"node": "📋 Get Eval Report", "type": "main", "index": 0}]
+      ]
+    },
+    "📋 Get Eval Report": {
+      "main": [
+        [{"node": "📝 Build Summary", "type": "main", "index": 0}]
+      ]
+    },
+    "📝 Build Summary": {
+      "main": [
+        [{"node": "Agent Improved?", "type": "main", "index": 0}]
+      ]
+    },
+    "Agent Improved?": {
+      "main": [
+        [{"node": "✅ Success", "type": "main", "index": 0}],
+        [{"node": "⚠️ Needs Tuning", "type": "main", "index": 0}]
       ]
     }
   },
   "settings": {
     "executionOrder": "v1"
-  }
+  },
+  "tags": [
+    {"name": "salesgym"},
+    {"name": "ai-agent"},
+    {"name": "self-improving"}
+  ]
 }
