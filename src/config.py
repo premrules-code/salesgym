@@ -9,7 +9,7 @@ ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 DIFY_API_KEY = os.getenv("DIFY_API_KEY", "")
 DIFY_BASE_URL = os.getenv("DIFY_BASE_URL", "https://api.dify.ai/v1")
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data"))
 STRATEGIES_DIR = os.path.join(DATA_DIR, "strategies")
 CONVERSATIONS_DIR = os.path.join(DATA_DIR, "conversations")
 MEMORY_DIR = os.path.join(DATA_DIR, "memory")
