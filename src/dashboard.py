@@ -142,80 +142,43 @@ if not results:
     </div>
     """, unsafe_allow_html=True)
 
-    # Show the strategies and workflow
-    col_left, col_right = st.columns([3, 2])
+    # ─── WORKFLOW: HOW IT WORKS ───
+    st.markdown("### 🔄 How the Self-Improvement Works")
+    st.markdown("")
 
-    with col_left:
-        st.markdown("### 🎯 The 8 Competing Strategies")
-        strategies = api_get("/api/strategies") or []
-        if strategies:
-            for i in range(0, len(strategies), 2):
-                cols = st.columns(2)
-                for j, col in enumerate(cols):
-                    if i + j < len(strategies):
-                        s = strategies[i + j]
-                        with col:
-                            st.markdown(f"""
-                            <div style="background:#1e1e2e;padding:0.8rem;border-radius:0.5rem;margin-bottom:0.5rem;">
-                                <div style="font-weight:bold;font-size:1rem;">#{i+j+1} {s['name']}</div>
-                                <div style="color:#aaa;font-size:0.85rem;margin-top:0.3rem;">{s.get('system_prompt', '')[:100]}...</div>
-                            </div>
-                            """, unsafe_allow_html=True)
+    # Step-by-step flow using colored HTML cards
+    steps = [
+        ("1", "#2563eb", "📞 Simulate Calls", "8 sales strategies each call 3 customer personas = <strong>24 calls</strong> per generation. Agent uses Dify + Gemini, customers simulated by Gemini Flash."),
+        ("2", "#7c3aed", "📊 Score Each Call", "Every call scored on: <strong>Conversion</strong> (+50), <strong>Rapport</strong> (0-30), <strong>Efficiency</strong> (0-20), <strong>Objection handling</strong> (+10). Max score = 110."),
+        ("3", "#db2777", "🧠 Analyze Patterns", "<strong>Claude Sonnet</strong> reads all 24 transcripts. Finds patterns like <em>\"ROI framing converted 67% vs discounts at 12%\"</em>. Generates improvement rules."),
+        ("4", "#ea580c", "📝 Learn Rules", "Rules like: <em>\"When customer says 'too expensive' → use ROI framing, not discounts\"</em> are saved to memory and <strong>injected into future prompts</strong>."),
+        ("5", "#16a34a", "🧬 Evolve Strategies", "<strong>Top 3</strong>: keep unchanged. <strong>Mid 3</strong>: mutate with new rules. <strong>Bottom 2</strong>: replaced by crossovers of the best. 8 new strategies emerge."),
+        ("6", "#0891b2", "🔁 Repeat with Harder Customers", "Next generation: evolved strategies face <strong>tougher customers</strong> with new objections. Rules accumulate. Agent gets smarter each round."),
+    ]
 
-    with col_right:
-        st.markdown("### 🔄 Evolution Pipeline")
-        st.markdown("""
-        ```
-        8 Strategies × 3 Customers
-              = 24 Calls
-                 │
-                 ▼
-          Score Each Call
-          (0-100 fitness)
-                 │
-                 ▼
-         Claude Analysis
-         "ROI framing won 67%"
-                 │
-                 ▼
-           Evolution
-           Top 3: KEEP
-           Mid 3: MUTATE
-           Bot 2: CROSSOVER
-                 │
-                 ▼
-        8 Evolved Strategies
-        + Harder Customers
-                 │
-                 ▼
-          Next Generation
-        ```
-        """)
+    for i in range(0, len(steps), 3):
+        cols = st.columns(3)
+        for j, col in enumerate(cols):
+            if i + j < len(steps):
+                num, color, title, desc = steps[i + j]
+                with col:
+                    st.markdown(f"""
+                    <div style="background:#1e1e2e;padding:1rem;border-radius:0.5rem;margin-bottom:0.8rem;border-left:4px solid {color};min-height:160px;">
+                        <div style="color:{color};font-weight:bold;font-size:0.8rem;margin-bottom:0.3rem;">STEP {num}</div>
+                        <div style="font-weight:bold;font-size:1.05rem;margin-bottom:0.4rem;">{title}</div>
+                        <div style="color:#bbb;font-size:0.85rem;line-height:1.5;">{desc}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("### 📊 Scoring Formula")
-    cols = st.columns(4)
-    with cols[0]:
-        st.markdown("**Converted?**")
-        st.markdown("`+50 points`")
-    with cols[1]:
-        st.markdown("**Rapport**")
-        st.markdown("`0-30 points`")
-    with cols[2]:
-        st.markdown("**Efficiency**")
-        st.markdown("`0-20 points`")
-    with cols[3]:
-        st.markdown("**Objection Handled**")
-        st.markdown("`+10 points`")
-
-    st.markdown("---")
-    st.markdown("### 🔁 Feedback Loop")
+    # Core feedback loop — one clear sentence
     st.markdown("""
-    > **outcome** → **analysis** → **script adjustment** → **better outcome**
-    >
-    > Rules like *"When customer says 'too expensive', use ROI framing instead of discounts"*
-    > are injected into the agent's prompt before each call.
-    """)
+    <div style="background:linear-gradient(135deg,#1a2a1a,#1e1e2e);padding:1rem 1.5rem;border-radius:0.5rem;border:1px solid #2a4a2a;text-align:center;margin:0.5rem 0 1rem 0;">
+        <div style="font-size:1.1rem;font-weight:bold;margin-bottom:0.3rem;">The Feedback Loop</div>
+        <div style="font-size:1rem;color:#bbb;">
+            Call outcomes → Claude analyzes what worked → Generates rules → Rules injected into next generation's prompts → Better outcomes
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("### 📅 What Happens Each Generation")
@@ -504,85 +467,48 @@ st.markdown("---")
 
 # ─── N8N WORKFLOW ───
 st.markdown("### 🔗 n8n Workflow — Pipeline Orchestration")
-st.caption("The evolution pipeline can be triggered and monitored via n8n (importable workflow included)")
+st.caption("Import `docs/n8n-workflow.json` into n8n to orchestrate the evolution pipeline visually")
 
-n8n_col1, n8n_col2 = st.columns([3, 2])
-with n8n_col1:
-    st.markdown("""
-    ```
-    ┌─────────────┐    ┌──────────────┐    ┌────────────┐
-    │   Trigger    │───▶│  ⚙️ Config   │───▶│ 🚀 Start   │
-    │  (Manual or  │    │ generations  │    │  Evolution  │
-    │  Scheduled)  │    │ api_url      │    │ POST /run   │
-    └─────────────┘    └──────────────┘    └─────┬──────┘
-                                                  │
-                        ┌─────────────────────────┘
-                        ▼
-                   ┌─────────┐    ┌──────────────┐
-                   │ ⏳ Wait  │───▶│ 📡 Check     │
-                   │  30 sec  │◀──┐│   Status     │
-                   └─────────┘   ││ GET /status  │
-                                 │└──────┬───────┘
-                                 │       │
-                                 │  ┌────▼─────┐
-                                 │  │ Still     │
-                                 └──│ Running?  │
-                                    └────┬──────┘
-                                         │ No
-                        ┌────────────────┘
-                        ▼
-    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-    │ 📊 Get       │───▶│ 🧠 Get       │───▶│ 📋 Get Eval  │
-    │  Results     │    │  Rules       │    │  Report      │
-    │ GET /results │    │ GET /rules   │    │ GET /eval    │
-    └──────────────┘    └──────────────┘    └──────┬───────┘
-                                                    │
-                        ┌───────────────────────────┘
-                        ▼
-                   ┌──────────┐
-                   │ 📝 Build │
-                   │ Summary  │
-                   └────┬─────┘
-                        │
-                   ┌────▼─────┐
-                   │ Improved?│
-                   └──┬───┬───┘
-              Yes ◀───┘   └───▶ No
-           ┌──────┐       ┌─────────┐
-           │  ✅   │       │   ⚠️    │
-           │ Pass  │       │  Tune   │
-           └──────┘       └─────────┘
-    ```
-    """)
+# n8n pipeline as clear step cards
+n8n_steps = [
+    ("🟦", "#2563eb", "1. Trigger", "Manual button or scheduled (e.g., daily)"),
+    ("🟦", "#3b82f6", "2. Configure", "Set API URL, number of generations (default: 3)"),
+    ("🟩", "#16a34a", "3. Start Evolution", "POST /api/run — kicks off background task"),
+    ("🟨", "#eab308", "4. Poll Status", "GET /api/status every 30s until running = false"),
+    ("🟪", "#7c3aed", "5. Collect Results", "GET /api/results + /api/rules + /api/eval"),
+    ("🟧", "#ea580c", "6. Check Improvement", "Did conversion improve? → Pass or Needs Tuning"),
+]
+n8n_cols = st.columns(6)
+for i, (icon, color, title, desc) in enumerate(n8n_steps):
+    with n8n_cols[i]:
+        st.markdown(f"""
+        <div style="background:#1e1e2e;padding:0.7rem;border-radius:0.5rem;text-align:center;border-top:3px solid {color};min-height:130px;">
+            <div style="font-size:0.75rem;font-weight:bold;color:{color};margin-bottom:0.3rem;">{title}</div>
+            <div style="color:#bbb;font-size:0.75rem;line-height:1.4;">{desc}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-with n8n_col2:
+st.markdown("")
+n8n_detail_col1, n8n_detail_col2 = st.columns(2)
+with n8n_detail_col1:
     st.markdown("#### How to Use")
     st.markdown("""
     1. **Import** `docs/n8n-workflow.json` into n8n
-    2. **Set** `SALESGYM_API_URL` env var in n8n
-    3. **Run** — triggers evolution, polls until done, collects results
-
-    **Features:**
-    - Polling loop (30s intervals)
-    - Error handling & branching
-    - Improvement check (pass/fail)
-    - Summary with conversion metrics
-
-    **Webhook mode** (alternative):
-    Pass `webhook_url` in `/api/run` body to get
-    notified after each generation completes.
+    2. **Set** `SALESGYM_API_URL` environment variable in n8n settings
+    3. **Click Run** — it triggers evolution, polls until done, then collects all results
+    4. **Webhook mode** (alternative): pass `webhook_url` in the POST body to get notified after each generation
     """)
-
-    st.markdown("#### API Endpoints")
+with n8n_detail_col2:
+    st.markdown("#### API Endpoints Used")
     st.markdown("""
-    | Endpoint | Method | Purpose |
-    |----------|--------|---------|
-    | `/api/run` | POST | Start evolution |
-    | `/api/status` | GET | Poll progress |
-    | `/api/results` | GET | All gen results |
-    | `/api/results/{gen}` | GET | Per-gen results |
-    | `/api/rules` | GET | Improvement rules |
-    | `/api/eval` | GET | Eval report |
+    | Endpoint | Purpose |
+    |----------|---------|
+    | `POST /api/run` | Start evolution |
+    | `GET /api/status` | Poll progress |
+    | `GET /api/results` | All generation results |
+    | `GET /api/results/{gen}` | Single generation data |
+    | `GET /api/rules` | Learned improvement rules |
+    | `GET /api/eval` | Final evaluation report |
     """)
 
 st.markdown("---")
