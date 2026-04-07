@@ -43,13 +43,55 @@ def api_post(path, data, timeout=10):
 # ─── HEADER ───
 st.markdown("# 🧬 SalesGym")
 st.markdown("**Self-improving AI sales agent** — evolves its own script through simulated calls")
-st.markdown("---")
 
 # ─── STATUS CHECK ───
 status = api_get("/api/status") or {"running": False, "generation": -1, "error": None}
 results = api_get("/api/results") or []
 rules = api_get("/api/rules") or []
 eval_report = api_get("/api/eval")
+
+# ─── BIG STATUS BANNER ───
+if status["running"]:
+    gen = status["generation"]
+    pct = int(((gen + 0.5) / 3) * 100)  # rough progress
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#3a2a00,#1e1e2e);padding:1.2rem 1.5rem;border-radius:0.8rem;border:1px solid #f0ad4e;margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <div style="font-size:1.2rem;font-weight:bold;color:#f0ad4e;">⏳ Evolution Running</div>
+                <div style="color:#ccc;margin-top:0.3rem;">Generation {gen} of 3 in progress — {len(results)} completed so far</div>
+                <div style="color:#888;font-size:0.85rem;margin-top:0.2rem;">~7-10 min per generation. Page auto-refreshes every 30 seconds.</div>
+            </div>
+            <div style="font-size:2.5rem;">🧬</div>
+        </div>
+        <div style="background:#333;border-radius:0.3rem;height:8px;margin-top:0.8rem;overflow:hidden;">
+            <div style="background:#f0ad4e;height:100%;width:{pct}%;border-radius:0.3rem;transition:width 0.5s;"></div>
+        </div>
+        <div style="color:#888;font-size:0.8rem;text-align:right;margin-top:0.3rem;">~{pct}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+elif status.get("error"):
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#3a1a1a,#1e1e2e);padding:1.2rem 1.5rem;border-radius:0.8rem;border:1px solid #d9534f;margin-bottom:1rem;">
+        <div style="font-size:1.2rem;font-weight:bold;color:#d9534f;">❌ Evolution Error</div>
+        <div style="color:#ccc;margin-top:0.3rem;">{status['error']}</div>
+    </div>
+    """, unsafe_allow_html=True)
+elif results:
+    final_conv = results[-1]["conversion_rate"] if results else 0
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#1a3a1a,#1e1e2e);padding:1.2rem 1.5rem;border-radius:0.8rem;border:1px solid #5cb85c;margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <div style="font-size:1.2rem;font-weight:bold;color:#5cb85c;">✅ Evolution Complete</div>
+                <div style="color:#ccc;margin-top:0.3rem;">{len(results)} generations finished — final conversion: {final_conv:.0%}</div>
+            </div>
+            <div style="font-size:2.5rem;">🏆</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
 
 # ─── SIDEBAR ───
 with st.sidebar:
@@ -119,8 +161,6 @@ with st.sidebar:
 
 # ─── AUTO REFRESH ───
 if status["running"]:
-    placeholder = st.empty()
-    placeholder.info(f"⏳ Evolution running — Generation {status['generation']}. Auto-refreshing in 30s...")
     time.sleep(30)
     st.rerun()
 
