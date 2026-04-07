@@ -54,17 +54,19 @@ Dify (sales agent) <──> Gemini Flash (customer simulator)
                           Next Generation
 ```
 
-| Component | Tool | Role |
-|-----------|------|------|
-| Sales Agent | Dify Chatflow + Gemini | Runs multi-turn conversations with dynamic prompt injection |
-| Customer Simulator | Gemini Flash | Role-plays as 3 customer personas with increasing difficulty |
-| Voice | ElevenLabs TTS | Voices every agent turn — playable in dashboard |
-| Scoring | Python FastAPI | Scores each call: conversion, rapport, efficiency, objection handling |
-| Analysis | Claude Sonnet | Reads transcripts, finds patterns, generates improvement rules |
-| Evolution | Claude Sonnet | Mutates mid-tier strategies, creates crossovers of top strategies |
-| Orchestration | n8n | Pipeline automation (workflow JSON included) |
-| Dashboard | Streamlit | Visual results, voice playback, strategy cards, flowcharts |
-| Hosting | Railway | API + dashboard with persistent volume for data |
+## Tech Stack Choices
+
+| Tool | What it does | Why this tool | Example in this project |
+|------|-------------|---------------|------------------------|
+| **Dify** | Hosts the sales agent chatflow | Dynamic prompt injection via input variables — can change the agent's script each generation without redeploying | Agent's system prompt includes `{{improvement_rules}}` variable. Gen 0 has no rules; Gen 2 has 12 rules injected automatically. |
+| **Gemini Flash** | Powers both the sales agent (via Dify) and customer simulator | Cheap ($0.02/gen for 24 calls) and fast. Good enough for role-play conversations. | Customer simulator receives a persona prompt like "You are Budget Bob, a bakery owner with a tight budget" and responds in character. |
+| **Claude Sonnet** | Analyzes call outcomes + evolves strategies | Strong reasoning needed to find patterns across 24 transcripts and generate actionable rules. Gemini can't do this well. | Reads all 24 transcripts and outputs: "ROI framing converted 67% of budget-conscious customers vs 0% for discounting. Rule: When price objection → use ROI framing." |
+| **ElevenLabs** | Text-to-speech for agent turns | High-quality voice, free tier sufficient for demo. Makes the "voice" requirement concrete. | Every agent response is converted to MP3. Playable inline in the dashboard next to the transcript text. |
+| **n8n** | Orchestrates the evolution pipeline | Visual workflow makes the pipeline easy to understand. Importable JSON. Handles polling, retries, branching. | Workflow: Trigger → Start evolution → Poll every 30s → Collect results → Check if agent improved → Pass/Fail. |
+| **FastAPI** | Backend API + scoring + evolution | Async Python — can run long evolution tasks in background while serving the dashboard. | `POST /api/run` starts 3 generations as a background task. `GET /api/status` returns `{"running": true, "generation": 1}`. |
+| **Streamlit** | Dashboard UI | Fast to build, supports charts, audio playback, auto-refresh. Good for data-heavy demos. | Shows graphviz flowcharts, strategy ranking cards with medals, inline audio players, and a conversion improvement bar chart. |
+| **Railway** | Hosting (API + dashboard) | One-click deploy from GitHub. Persistent volumes for data. Runs both processes in one container. | `start.sh` runs uvicorn (port 8000) + Streamlit (public port). Volume at `/app/data` survives redeploys. |
+| **Pydantic** | Data models | Type-safe models with validation. Clean serialization to/from JSON. | `CallTranscript` model enforces that every transcript has `strategy_name`, `turns`, `outcome` with correct types. |
 
 ## Feedback Loop
 
