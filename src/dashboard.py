@@ -126,6 +126,22 @@ if status["running"]:
 
 # ─── NO RESULTS YET ───
 if not results:
+    st.markdown("""
+    <div style="background:linear-gradient(135deg,#1a3a5c,#1e1e2e);padding:1.5rem;border-radius:0.8rem;margin-bottom:1.5rem;border:1px solid #2a4a6c;">
+        <div style="font-size:1.3rem;font-weight:bold;margin-bottom:0.5rem;">🚀 How to Run</div>
+        <div style="font-size:1rem;line-height:1.8;">
+            <strong>1.</strong> In the sidebar (left), select number of <strong>Generations</strong> (3 recommended)<br>
+            <strong>2.</strong> Click <strong>"🚀 Run Evolution"</strong><br>
+            <strong>3.</strong> Wait ~20-30 min — the page auto-refreshes every 30s<br>
+            <strong>4.</strong> Watch strategies compete, evolve, and improve their conversion rates
+        </div>
+        <div style="color:#aaa;font-size:0.85rem;margin-top:0.8rem;">
+            Each generation runs 24 simulated sales calls (8 strategies × 3 customers),
+            then Claude analyzes patterns and evolves the strategies.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     # Show the strategies and workflow
     col_left, col_right = st.columns([3, 2])
 
@@ -323,7 +339,6 @@ if not results:
         </div>
         """, unsafe_allow_html=True)
 
-    st.info("👈 Click **Run Evolution** to start!")
     st.stop()
 
 # ─── RESULTS ───
