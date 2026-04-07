@@ -59,7 +59,8 @@ class Arena:
                     text=agent_text, generation=generation,
                     call_id=call_id, turn=turn_num,
                 )
-            except Exception:
+            except Exception as e:
+                print(f"    Voice error: {e}")
                 audio_path = None
 
             turns.append(Turn(role="agent", text=agent_text, audio_path=audio_path))
