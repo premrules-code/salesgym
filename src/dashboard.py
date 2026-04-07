@@ -79,7 +79,7 @@ with st.sidebar:
             """, unsafe_allow_html=True)
             st.markdown("")
 
-        num_gens = st.selectbox("Generations", [1, 2, 3, 4, 5], index=2)
+        num_gens = st.selectbox("Generations", [1, 2, 3], index=2)
         if st.button("🚀 Run Evolution", use_container_width=True, type="primary"):
             resp = api_post("/api/run", {"num_generations": num_gens})
             if resp and resp.get("status") == "started":
@@ -371,7 +371,55 @@ for tab, gen_result in zip(tabs, results):
                 </div>
                 """, unsafe_allow_html=True)
 
-        # Individual calls
+        # ─── VOICE CALLS ───
+        st.markdown("")
+        st.markdown("#### 🔊 Voice Calls")
+        st.caption("Agent responses are voiced via ElevenLabs TTS — listen to the AI sales agent in action")
+
+        # Show first few calls with audio prominently
+        voice_shown = 0
+        for t in gen_result["transcripts"]:
+            # Find first agent turn with audio
+            has_audio = any(
+                turn.get("audio_path") for turn in t["turns"] if turn["role"] == "agent"
+            )
+            if not has_audio:
+                continue
+
+            icon = "✅" if t["outcome"]["converted"] else "❌"
+            st.markdown(f"""
+            <div style="background:#1e1e2e;padding:0.8rem 1rem;border-radius:0.5rem;margin-bottom:0.3rem;">
+                <span style="font-weight:bold;">{icon} {t['strategy_name']}</span>
+                <span style="color:#888;"> vs </span>
+                <span style="font-weight:bold;">{t['customer_id']}</span>
+                <span style="color:#888;font-size:0.85rem;"> — {t['outcome']['turns']} turns, rapport {t['outcome']['rapport']:.1f}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            for turn in t["turns"]:
+                if turn["role"] == "agent" and turn.get("audio_path"):
+                    filename = os.path.basename(turn["audio_path"])
+                    audio_url = f"{API_URL}/api/audio/{t['generation']}/{filename}"
+                    try:
+                        audio_resp = requests.get(audio_url, timeout=5)
+                        if audio_resp.status_code == 200:
+                            col_text, col_audio = st.columns([3, 2])
+                            with col_text:
+                                st.markdown(f"🤖 *\"{turn['text'][:120]}{'...' if len(turn['text']) > 120 else ''}\"*")
+                            with col_audio:
+                                st.audio(audio_resp.content, format="audio/mpeg")
+                            break  # One audio sample per call
+                    except Exception:
+                        pass
+
+            voice_shown += 1
+            if voice_shown >= 3:
+                break
+
+        if voice_shown == 0:
+            st.info("No voice audio available for this generation.")
+
+        # ─── FULL TRANSCRIPTS ───
         st.markdown("")
         st.markdown("#### Call Transcripts")
         for t in gen_result["transcripts"]:
@@ -387,7 +435,6 @@ for tab, gen_result in zip(tabs, results):
                 for turn in t["turns"]:
                     if turn["role"] == "agent":
                         st.markdown(f"🤖 **Agent:** {turn['text']}")
-                        # Play voice audio if available
                         audio_path = turn.get("audio_path", "")
                         if audio_path:
                             filename = os.path.basename(audio_path)
