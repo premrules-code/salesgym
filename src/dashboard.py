@@ -213,6 +213,25 @@ if not results:
     """, use_container_width=True)
 
     st.markdown("---")
+
+    # ─── 8 STRATEGIES ───
+    st.markdown("### 🎯 The 8 Competing Strategies")
+    strategies_data = api_get("/api/strategies") or []
+    if strategies_data:
+        for i in range(0, len(strategies_data), 4):
+            cols = st.columns(4)
+            for j, col in enumerate(cols):
+                if i + j < len(strategies_data):
+                    s = strategies_data[i + j]
+                    with col:
+                        st.markdown(f"""
+                        <div style="background:#1e1e2e;padding:0.8rem;border-radius:0.5rem;margin-bottom:0.5rem;min-height:90px;">
+                            <div style="font-weight:bold;font-size:0.95rem;">#{i+j+1} {s['name']}</div>
+                            <div style="color:#aaa;font-size:0.8rem;margin-top:0.3rem;">{s.get('system_prompt', '')[:80]}...</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+    st.markdown("---")
     st.markdown("### 📅 What Happens Each Generation")
 
     gen_tabs = st.tabs(["Gen 0 — Baseline", "Gen 1 — First Evolution", "Gen 2 — Final Push"])
