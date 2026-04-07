@@ -1,10 +1,12 @@
 import asyncio
 import json
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from src.config import DATA_DIR
+from src.config import DATA_DIR, VOICE_DIR
 from src.seed_data import get_initial_strategies, get_customer_personas
 from src.arena import Arena
 from src.memory import MemoryManager
@@ -166,9 +168,17 @@ def get_results():
 
 @app.get("/api/eval")
 def get_eval_report():
-    import os
     path = os.path.join(DATA_DIR, "evals", "report.json")
     if not os.path.exists(path):
         raise HTTPException(404, "No eval report yet. Run /api/run first.")
     with open(path) as f:
         return json.load(f)
+
+
+@app.get("/api/audio/{generation}/{filename}")
+def get_audio(generation: int, filename: str):
+    """Serve voice audio files."""
+    path = os.path.join(VOICE_DIR, f"gen_{generation}", filename)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Audio not found")
+    return FileResponse(path, media_type="audio/mpeg")

@@ -409,6 +409,17 @@ for tab, gen_result in zip(tabs, results):
                 for turn in t["turns"]:
                     if turn["role"] == "agent":
                         st.markdown(f"🤖 **Agent:** {turn['text']}")
+                        # Play voice audio if available
+                        audio_path = turn.get("audio_path", "")
+                        if audio_path:
+                            filename = os.path.basename(audio_path)
+                            audio_url = f"{API_URL}/api/audio/{t['generation']}/{filename}"
+                            try:
+                                audio_resp = requests.get(audio_url, timeout=5)
+                                if audio_resp.status_code == 200:
+                                    st.audio(audio_resp.content, format="audio/mpeg")
+                            except Exception:
+                                pass
                     else:
                         st.markdown(f"👤 **Customer:** {turn['text']}")
                 if t["outcome"]["objections_faced"]:
