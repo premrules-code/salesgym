@@ -184,41 +184,33 @@ if not results:
 
     # ─── WORKFLOW: HOW IT WORKS ───
     st.markdown("### 🔄 How the Self-Improvement Works")
-    st.markdown("")
 
-    # Step-by-step flow using colored HTML cards
-    steps = [
-        ("1", "#2563eb", "📞 Simulate Calls", "8 sales strategies each call 3 customer personas = <strong>24 calls</strong> per generation. Agent uses Dify + Gemini, customers simulated by Gemini Flash."),
-        ("2", "#7c3aed", "📊 Score Each Call", "Every call scored on: <strong>Conversion</strong> (+50), <strong>Rapport</strong> (0-30), <strong>Efficiency</strong> (0-20), <strong>Objection handling</strong> (+10). Max score = 110."),
-        ("3", "#db2777", "🧠 Analyze Patterns", "<strong>Claude Sonnet</strong> reads all 24 transcripts. Finds patterns like <em>\"ROI framing converted 67% vs discounts at 12%\"</em>. Generates improvement rules."),
-        ("4", "#ea580c", "📝 Learn Rules", "Rules like: <em>\"When customer says 'too expensive' → use ROI framing, not discounts\"</em> are saved to memory and <strong>injected into future prompts</strong>."),
-        ("5", "#16a34a", "🧬 Evolve Strategies", "<strong>Top 3</strong>: keep unchanged. <strong>Mid 3</strong>: mutate with new rules. <strong>Bottom 2</strong>: replaced by crossovers of the best. 8 new strategies emerge."),
-        ("6", "#0891b2", "🔁 Repeat with Harder Customers", "Next generation: evolved strategies face <strong>tougher customers</strong> with new objections. Rules accumulate. Agent gets smarter each round."),
-    ]
+    st.graphviz_chart("""
+    digraph evolution {
+        rankdir=TB
+        bgcolor="transparent"
+        node [shape=box style="rounded,filled" fontname="Helvetica" fontsize=12 color="#333" penwidth=1.5]
+        edge [color="#666" penwidth=1.5 arrowsize=0.8]
 
-    for i in range(0, len(steps), 3):
-        cols = st.columns(3)
-        for j, col in enumerate(cols):
-            if i + j < len(steps):
-                num, color, title, desc = steps[i + j]
-                with col:
-                    st.markdown(f"""
-                    <div style="background:#1e1e2e;padding:1rem;border-radius:0.5rem;margin-bottom:0.8rem;border-left:4px solid {color};min-height:160px;">
-                        <div style="color:{color};font-weight:bold;font-size:0.8rem;margin-bottom:0.3rem;">STEP {num}</div>
-                        <div style="font-weight:bold;font-size:1.05rem;margin-bottom:0.4rem;">{title}</div>
-                        <div style="color:#bbb;font-size:0.85rem;line-height:1.5;">{desc}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+        strategies [label="8 Sales Strategies\\n(Storyteller, Closer, Expert, ...)" fillcolor="#dbeafe" fontcolor="#1e40af"]
+        calls [label="× 3 Customers = 24 Calls\\nAgent (Dify) vs Customer (Gemini)" fillcolor="#ede9fe" fontcolor="#5b21b6"]
+        voice [label="ElevenLabs\\nVoice TTS" fillcolor="#fce7f3" fontcolor="#9d174d" shape=oval]
+        score [label="Score Each Call\\nConversion +50 | Rapport 0-30\\nEfficiency 0-20 | Objections +10" fillcolor="#fef3c7" fontcolor="#92400e"]
+        analyze [label="Claude Sonnet Analyzes\\n\\"ROI framing won 67%\\"\\n\\"Discounts only converted 12%\\"" fillcolor="#fce4ec" fontcolor="#880e4f"]
+        rules [label="Generate Improvement Rules\\n\\"When 'too expensive'\\n→ use ROI framing, not discounts\\"" fillcolor="#fff3e0" fontcolor="#e65100"]
+        evolve [label="Evolve Strategies\\nTop 3: KEEP as-is\\nMid 3: MUTATE with rules\\nBot 2: CROSSOVER best traits" fillcolor="#e8f5e9" fontcolor="#1b5e20"]
+        next [label="Next Generation\\n+ Harder Customers\\n+ Rules Injected Into Prompts" fillcolor="#e0f7fa" fontcolor="#006064"]
 
-    # Core feedback loop — one clear sentence
-    st.markdown("""
-    <div style="background:linear-gradient(135deg,#1a2a1a,#1e1e2e);padding:1rem 1.5rem;border-radius:0.5rem;border:1px solid #2a4a2a;text-align:center;margin:0.5rem 0 1rem 0;">
-        <div style="font-size:1.1rem;font-weight:bold;margin-bottom:0.3rem;">The Feedback Loop</div>
-        <div style="font-size:1rem;color:#bbb;">
-            Call outcomes → Claude analyzes what worked → Generates rules → Rules injected into next generation's prompts → Better outcomes
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        strategies -> calls
+        calls -> voice [style=dashed label="  voice agent turns"]
+        calls -> score
+        score -> analyze
+        analyze -> rules
+        rules -> evolve
+        evolve -> next
+        next -> strategies [label="  repeat 3x" style=bold color="#16a34a" fontcolor="#16a34a"]
+    }
+    """, use_container_width=True)
 
     st.markdown("---")
     st.markdown("### 📅 What Happens Each Generation")
@@ -554,48 +546,54 @@ st.markdown("---")
 
 # ─── N8N WORKFLOW ───
 st.markdown("### 🔗 n8n Workflow — Pipeline Orchestration")
-st.caption("Import `docs/n8n-workflow.json` into n8n to orchestrate the evolution pipeline visually")
+st.caption("n8n orchestrates the entire evolution pipeline. Import `docs/n8n-workflow.json` into n8n to run it.")
 
-# n8n pipeline as clear step cards
-n8n_steps = [
-    ("🟦", "#2563eb", "1. Trigger", "Manual button or scheduled (e.g., daily)"),
-    ("🟦", "#3b82f6", "2. Configure", "Set API URL, number of generations (default: 3)"),
-    ("🟩", "#16a34a", "3. Start Evolution", "POST /api/run — kicks off background task"),
-    ("🟨", "#eab308", "4. Poll Status", "GET /api/status every 30s until running = false"),
-    ("🟪", "#7c3aed", "5. Collect Results", "GET /api/results + /api/rules + /api/eval"),
-    ("🟧", "#ea580c", "6. Check Improvement", "Did conversion improve? → Pass or Needs Tuning"),
-]
-n8n_cols = st.columns(6)
-for i, (icon, color, title, desc) in enumerate(n8n_steps):
-    with n8n_cols[i]:
-        st.markdown(f"""
-        <div style="background:#1e1e2e;padding:0.7rem;border-radius:0.5rem;text-align:center;border-top:3px solid {color};min-height:130px;">
-            <div style="font-size:0.75rem;font-weight:bold;color:{color};margin-bottom:0.3rem;">{title}</div>
-            <div style="color:#bbb;font-size:0.75rem;line-height:1.4;">{desc}</div>
-        </div>
-        """, unsafe_allow_html=True)
+st.graphviz_chart("""
+digraph n8n {
+    rankdir=LR
+    bgcolor="transparent"
+    node [shape=box style="rounded,filled" fontname="Helvetica" fontsize=11 penwidth=1.5]
+    edge [color="#666" penwidth=1.5 arrowsize=0.8]
 
-st.markdown("")
-n8n_detail_col1, n8n_detail_col2 = st.columns(2)
-with n8n_detail_col1:
+    trigger [label="Manual\\nTrigger" fillcolor="#dbeafe" fontcolor="#1e40af"]
+    config [label="Config\\nAPI URL\\n3 generations" fillcolor="#e0e7ff" fontcolor="#3730a3"]
+    start [label="POST /api/run\\nStart Evolution" fillcolor="#dcfce7" fontcolor="#166534"]
+    wait [label="Wait 30s" fillcolor="#fef9c3" fontcolor="#854d0e"]
+    poll [label="GET /api/status\\nCheck Progress" fillcolor="#fef9c3" fontcolor="#854d0e"]
+    running [label="Still\\nrunning?" fillcolor="#fef9c3" fontcolor="#854d0e" shape=diamond]
+    results [label="GET /api/results\\n+ /api/rules\\n+ /api/eval" fillcolor="#ede9fe" fontcolor="#5b21b6"]
+    summary [label="Build\\nSummary" fillcolor="#ede9fe" fontcolor="#5b21b6"]
+    check [label="Agent\\nimproved?" fillcolor="#fff7ed" fontcolor="#9a3412" shape=diamond]
+    pass_ [label="PASS" fillcolor="#dcfce7" fontcolor="#166534"]
+    tune [label="NEEDS\\nTUNING" fillcolor="#fef2f2" fontcolor="#991b1b"]
+
+    trigger -> config -> start -> wait -> poll -> running
+    running -> wait [label="yes" fontcolor="#854d0e" color="#eab308"]
+    running -> results [label="no" fontcolor="#166534" color="#16a34a"]
+    results -> summary -> check
+    check -> pass_ [label="yes" fontcolor="#166534" color="#16a34a"]
+    check -> tune [label="no" fontcolor="#991b1b" color="#dc2626"]
+}
+""", use_container_width=True)
+
+n8n_col1, n8n_col2 = st.columns(2)
+with n8n_col1:
     st.markdown("#### How to Use")
     st.markdown("""
     1. **Import** `docs/n8n-workflow.json` into n8n
-    2. **Set** `SALESGYM_API_URL` environment variable in n8n settings
-    3. **Click Run** — it triggers evolution, polls until done, then collects all results
-    4. **Webhook mode** (alternative): pass `webhook_url` in the POST body to get notified after each generation
+    2. **Set** `SALESGYM_API_URL` env var (e.g. Railway URL)
+    3. **Click Run** — triggers evolution, polls until done, collects results
     """)
-with n8n_detail_col2:
-    st.markdown("#### API Endpoints Used")
+with n8n_col2:
+    st.markdown("#### API Endpoints")
     st.markdown("""
     | Endpoint | Purpose |
     |----------|---------|
     | `POST /api/run` | Start evolution |
     | `GET /api/status` | Poll progress |
-    | `GET /api/results` | All generation results |
-    | `GET /api/results/{gen}` | Single generation data |
-    | `GET /api/rules` | Learned improvement rules |
-    | `GET /api/eval` | Final evaluation report |
+    | `GET /api/results` | All results |
+    | `GET /api/rules` | Improvement rules |
+    | `GET /api/eval` | Eval report |
     """)
 
 st.markdown("---")
