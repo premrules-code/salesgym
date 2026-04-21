@@ -1,6 +1,5 @@
 # SalesGym — Self-Improving Call Center Agent
 
-> **Binox 2026 Take-Home — G1**
 
 A co-evolutionary AI sales agent that conducts simulated sales calls, analyzes outcomes, and iteratively rewrites its own script to improve conversion rates.
 
